@@ -2,7 +2,7 @@
 
 #include <cassert>
 #include <initializer_list>
-#include "arrayptr.h"
+#include "array_ptr.h"
 #include <algorithm>
 #include <stdexcept>
 
