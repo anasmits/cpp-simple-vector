@@ -44,7 +44,7 @@ public:
     , items_(size)
     {
         for (auto it = begin(); it != end(); ++it){
-            *it = std::move(Type{});
+            *it = Type{};
         }
     }
 
@@ -54,9 +54,7 @@ public:
     , capacity_(size)
     , items_(size)
     {
-        for (auto it = begin(); it < end(); ++it) {
-            *it = std::move(value);
-        }
+        std::fill(begin(), end(), std::move(value));
     }
 
     // Создаёт вектор из std::initializer_list
@@ -65,25 +63,18 @@ public:
     , capacity_(init.size())
     , items_(init.size())
     {
-        size_t i = 0;
-        for (const auto x : init) {
-            items_[i] = std::move(x);
-            ++i;
-        };
+        std::copy(init.begin(), init.end(), begin());
     }
 
     SimpleVector(ReserveProxyObj proxy_obj){
         capacity_ = proxy_obj.GetCapacity();
     }
 
-    SimpleVector(const SimpleVector& other) {
-        if(!other.IsEmpty()) {
-            size_ = other.size_;
-            capacity_ = other.capacity_;
-            ArrayPtr<Type> new_items(other.size_);
-            std::copy(other.begin(), other.end(), &new_items[0]);
-            items_.swap(new_items);
-        }
+    SimpleVector(const SimpleVector& other)
+    : size_(other.size_)
+    , capacity_(other.capacity_)
+    , items_(other.size_){
+            std::copy(other.begin(), other.end(), begin());
     }
 
     SimpleVector& operator=(const SimpleVector& rhs) {
@@ -101,10 +92,12 @@ public:
     }
 
     SimpleVector& operator=(SimpleVector&& other){
-        size_ = std::exchange(other.size_, 0);
-        capacity_ = std::exchange(other.capacity_, 0);
-        items_ = std::exchange(other.items_, ArrayPtr<Type>());
-        return *this;
+        if (&other != this) {
+            size_ = std::exchange(other.size_, 0);
+            capacity_ = std::exchange(other.capacity_, 0);
+            items_ = std::exchange(other.items_, ArrayPtr<Type>());
+            return *this;
+        }
     }
 
     ~SimpleVector(){}
@@ -145,13 +138,13 @@ public:
 
     // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
     void PopBack() noexcept {
-        if(!IsEmpty()){
-            --size_;
-        }
+        assert(!IsEmpty());
+        --size_;
     }
 
     // Удаляет элемент вектора в указанной позиции
     Iterator Erase(ConstIterator pos) {
+        assert(pos >= cbegin() && pos < cend());
         Iterator it_pos = begin() + (pos - cbegin());
         if (it_pos == begin()){
             std::move(it_pos+1, end(), begin());
@@ -167,6 +160,7 @@ public:
     // Если перед вставкой значения вектор был заполнен полностью,
     // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
     Iterator Insert(ConstIterator pos, const Type& value) {
+        assert(pos >= cbegin() && pos <= cend());
         if(IsEmpty()){
             PushBack(value);
             return begin();
@@ -183,6 +177,7 @@ public:
     }
 
     Iterator Insert(ConstIterator pos, Type&& value) {
+        assert(pos >= cbegin() && pos <= cend());
         if(IsEmpty()){
             PushBack(std::move(value));
             return begin();
@@ -222,16 +217,18 @@ public:
 
     // Сообщает, пустой ли массив
     bool IsEmpty() const noexcept {
-        return size_ == 0 ? true : false;
+        return size_ == 0;
     }
 
     // Возвращает ссылку на элемент с индексом index
     Type& operator[](size_t index) noexcept {
+        assert(index >= 0 && index < size_);
         return items_[index];
     }
 
     // Возвращает константную ссылку на элемент с индексом index
     const Type& operator[](size_t index) const noexcept {
+        assert(index >= 0 && index < size_);
         return items_[index];
     }
 
@@ -258,7 +255,7 @@ public:
         size_ = 0;
     }
 
-//     Изменяет размер массива.
+    // Изменяет размер массива.
 //     При увеличении размера новые элементы получают значение по умолчанию для типа Type
     void Resize(size_t new_size) {
         if (new_size < size_){
@@ -279,13 +276,13 @@ public:
     // Возвращает итератор на начало массива
     // Для пустого массива может быть равен (или не равен) nullptr
     Iterator begin() noexcept {
-        return IsEmpty() ? nullptr : &items_[0];
+        return items_.Get();
     }
 
     // Возвращает итератор на элемент, следующий за последним
     // Для пустого массива может быть равен (или не равен) nullptr
     Iterator end() noexcept {
-        return IsEmpty() ? nullptr : &items_[size_];
+        return (items_.Get() + size_);
     }
 
     // Возвращает константный итератор на начало массива
