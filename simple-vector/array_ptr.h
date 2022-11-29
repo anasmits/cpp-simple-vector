@@ -34,20 +34,22 @@ public:
     }
 
     ArrayPtr& operator=(ArrayPtr&& other){
-        raw_ptr_ = std::exchange(other.raw_ptr_, nullptr);
-        return *this;
+        if (this != &other) {
+            raw_ptr_ = std::exchange(other.raw_ptr_, raw_ptr_);
+            return *this;
+        }
     }
 
     ~ArrayPtr() {
         delete[] raw_ptr_;
     }
 
+
+
     // Прекращает владением массивом в памяти, возвращает значение адреса массива
     // После вызова метода указатель на массив должен обнулиться
     [[nodiscard]] Type* Release() noexcept {
-        auto old = raw_ptr_;
-        raw_ptr_ = nullptr;
-        return old;
+        return std::exchange(raw_ptr_, nullptr);
     }
 
     // Возвращает ссылку на элемент массива с индексом index
@@ -62,7 +64,7 @@ public:
 
     // Возвращает true, если указатель ненулевой, и false в противном случае
     explicit operator bool() const {
-        return raw_ptr_ ? true : false;
+        return raw_ptr_ != nullptr;
     }
 
     // Возвращает значение сырого указателя, хранящего адрес начала массива
@@ -72,9 +74,7 @@ public:
 
     // Обменивается значениям указателя на массив с объектом other
     void swap(ArrayPtr& other) noexcept {
-        auto tmp = other.raw_ptr_ ;
-        other.raw_ptr_ = raw_ptr_;
-        raw_ptr_ = tmp;
+        std::swap(other.raw_ptr_, raw_ptr_);
     }
 
 private:
