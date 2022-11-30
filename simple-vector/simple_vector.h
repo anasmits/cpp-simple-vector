@@ -54,7 +54,7 @@ public:
     , capacity_(size)
     , items_(size)
     {
-        std::fill(begin(), end(), std::move(value));
+        std::fill(begin(), end(), value);
     }
 
     // Создаёт вектор из std::initializer_list
@@ -228,7 +228,7 @@ public:
 
     // Возвращает константную ссылку на элемент с индексом index
     const Type& operator[](size_t index) const noexcept {
-        assert(index >= 0 && index < size_);
+        assert(index < size_);
         return items_[index];
     }
 
@@ -288,13 +288,13 @@ public:
     // Возвращает константный итератор на начало массива
     // Для пустого массива может быть равен (или не равен) nullptr
     ConstIterator begin() const noexcept {
-        return IsEmpty() ? nullptr : &items_[0];
+        return items_.Get();
     }
 
     // Возвращает итератор на элемент, следующий за последним
     // Для пустого массива может быть равен (или не равен) nullptr
     ConstIterator end() const noexcept {
-        return IsEmpty() ? nullptr : &items_[size_];
+        return (items_.Get() + size_);
     }
 
     // Возвращает константный итератор на начало массива
@@ -341,4 +341,3 @@ template <typename Type>
 inline bool operator>=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
     return !(rhs > lhs);
 }
-
